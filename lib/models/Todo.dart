@@ -30,4 +30,17 @@ class Todo{
       'isDone': isDone
     };
   }
+
+   String toJson() {
+    return jsonEncode(toMap());
+  }
+
+  factory Todo.fromJson(String jsonStr) {
+    Map<String, dynamic> map = jsonDecode(jsonStr);
+    return Todo(
+      title: map['title'],
+      description: map['description'],
+      isDone: map['isDone'],
+    );
+  }
 }

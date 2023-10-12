@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:to_do_app/models/Todo.dart';
 
 void main() {
@@ -46,6 +48,19 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Todo> completedTodos = [];
   bool showCompletedTodos = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _retrieveTodos();
+
+  }
+  
+  @override
+  dispose(){
+    _saveLocally();
+    super.dispose();
+  }
+
   void _addTodo(String title, String description) {
     setState(() {
       todos.add(Todo(
@@ -54,6 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
         isDone: false,
       ));
     });
+    _saveLocally();
   }
 
   void _finishTodo(int index, Todo todo) {
@@ -61,6 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
       todos.removeAt(index);
       completedTodos.add(todo);
     });
+    _saveLocally();
   }
 
   void _unfinishedTodo(int index, Todo todo) {
@@ -68,6 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
       completedTodos.removeAt(index);
       todos.add(todo);
     });
+    _saveLocally();
   }
 
   void _showTodoDialogue() {
@@ -115,6 +133,27 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void _saveLocally() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String todosJson = jsonEncode(todos.map((todo)=> todo.toJson()).toList());
+
+    String completedTodosJson = jsonEncode(completedTodos.map((todo)=> todo.toJson()).toList());
+    
+    await prefs.setString('todos', todosJson);
+    await prefs.setString('completedTodos', completedTodosJson);
+  }
+
+  void _retrieveTodos() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String todosJson = prefs.getString('todos')?? '[]';
+    String completedTodosJson = prefs.getString('completedTodos')?? '[]';
+
+    setState(() {
+      todos = (jsonDecode(todosJson) as List).map((todo)=> Todo.fromJson(todo)).toList();
+      completedTodos = (jsonDecode(completedTodosJson) as List).map((todo)=> Todo.fromJson(todo)).toList();
+    });
+
+  }
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -194,9 +233,8 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
         ],
-      ),
-
-      floatingActionButton: FloatingActionButton(
+      ), 
+        floatingActionButton: FloatingActionButton(
         onPressed: _showTodoDialogue,
         tooltip: 'Add Todo',
         child: const Icon(Icons.add),
