@@ -52,11 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _retrieveTodos();
-
   }
-  
+
   @override
-  dispose(){
+  dispose() {
     _saveLocally();
     super.dispose();
   }
@@ -133,27 +132,39 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _saveLocally() async{
+  void _saveLocally() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String todosJson = jsonEncode(todos.map((todo)=> todo.toJson()).toList());
+    String todosJson = jsonEncode(todos.map((todo) => todo.toJson()).toList());
 
-    String completedTodosJson = jsonEncode(completedTodos.map((todo)=> todo.toJson()).toList());
-    
+    String completedTodosJson =
+        jsonEncode(completedTodos.map((todo) => todo.toJson()).toList());
+
     await prefs.setString('todos', todosJson);
     await prefs.setString('completedTodos', completedTodosJson);
   }
 
-  void _retrieveTodos() async{
+  void _retrieveTodos() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String todosJson = prefs.getString('todos')?? '[]';
-    String completedTodosJson = prefs.getString('completedTodos')?? '[]';
+    String todosJson = prefs.getString('todos') ?? '[]';
+    String completedTodosJson = prefs.getString('completedTodos') ?? '[]';
 
     setState(() {
-      todos = (jsonDecode(todosJson) as List).map((todo)=> Todo.fromJson(todo)).toList();
-      completedTodos = (jsonDecode(completedTodosJson) as List).map((todo)=> Todo.fromJson(todo)).toList();
+      todos = (jsonDecode(todosJson) as List)
+          .map((todo) => Todo.fromJson(todo))
+          .toList();
+      completedTodos = (jsonDecode(completedTodosJson) as List)
+          .map((todo) => Todo.fromJson(todo))
+          .toList();
     });
-
   }
+
+  _deleteTodo(int index, List<Todo> todos) {
+    setState(() {
+      todos.removeAt(index);
+    });
+    _saveLocally();
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -173,7 +184,7 @@ class _MyHomePageState extends State<MyHomePage> {
               (BuildContext context, int index) {
                 if (index == todos.length) {
                   // if (todos.isEmpty) return Container();
-                
+
                   if (showCompletedTodos) {
                     return TextButton(
                       child: const Text("Hide Completed Todos"),
@@ -189,22 +200,34 @@ class _MyHomePageState extends State<MyHomePage> {
                       }),
                     );
                   }
-                 
                 }
-                return ListTile(
-                    title: Text(todos[index].title),
-                    subtitle: Text(todos[index].description),
-                    trailing: Checkbox(
-                      value: todos[index].isDone,
-                      onChanged: (value) {
-                        _finishTodo(
-                          index,
-                          todos[index].copyWith(
-                            isDone: value,
-                          ),
-                        );
-                      },
-                    ));
+                return Dismissible(
+                  key: Key(todos[index].title),
+                  onDismissed: (direction) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('${todos[index].title} dismissed')));
+
+                    setState(() {
+                      _deleteTodo(index, todos);
+                    });
+                    // Then show a snackbar.
+                  },
+                  background: Container(color: Colors.red),
+                  child: ListTile(
+                      title: Text(todos[index].title),
+                      subtitle: Text(todos[index].description),
+                      trailing: Checkbox(
+                        value: todos[index].isDone,
+                        onChanged: (value) {
+                          _finishTodo(
+                            index,
+                            todos[index].copyWith(
+                              isDone: value,
+                            ),
+                          );
+                        },
+                      )),
+                );
               },
               childCount: todos.length + 1,
             ),
@@ -213,28 +236,40 @@ class _MyHomePageState extends State<MyHomePage> {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (BuildContext context, int index) {
-                
-                  return ListTile(
-                      title: Text(completedTodos[index].title),
-                      subtitle: Text(completedTodos[index].description),
-                      trailing: Checkbox(
-                        value: completedTodos[index].isDone,
-                        onChanged: (value) {
-                          _unfinishedTodo(
-                            index,
-                            completedTodos[index].copyWith(
-                              isDone: value,
-                            ),
-                          );
-                        },
-                      ));
+                  return Dismissible(
+                    key: Key(completedTodos[index].title),
+                    onDismissed: (direction) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(
+                              '${completedTodos[index].title} dismissed')));
+
+                      setState(() {
+                        _deleteTodo(index, completedTodos);
+                      });
+                    },
+                    background: Container(color: Colors.red),
+                    child: ListTile(
+                        title: Text(completedTodos[index].title),
+                        subtitle: Text(completedTodos[index].description),
+                        trailing: Checkbox(
+                          value: completedTodos[index].isDone,
+                          onChanged: (value) {
+                            _unfinishedTodo(
+                              index,
+                              completedTodos[index].copyWith(
+                                isDone: value,
+                              ),
+                            );
+                          },
+                        )),
+                  );
                 },
                 childCount: completedTodos.length,
               ),
             ),
         ],
-      ), 
-        floatingActionButton: FloatingActionButton(
+      ),
+      floatingActionButton: FloatingActionButton(
         onPressed: _showTodoDialogue,
         tooltip: 'Add Todo',
         child: const Icon(Icons.add),
